@@ -2,12 +2,15 @@ version: '3'
 services:
   graph-node:
     image: graphprotocol/graph-node
+    # Only the query endpoint (8000) is public. Admin (8020: deploy/remove
+    # subgraphs), subscriptions, index status and metrics stay on the host:
+    # Docker opens published ports past ufw, so 0.0.0.0 means the internet.
     ports:
       - '8000:8000'
-      - '8001:8001'
-      - '8020:8020'
-      - '8030:8030'
-      - '8040:8040'
+      - '127.0.0.1:8001:8001'
+      - '127.0.0.1:8020:8020'
+      - '127.0.0.1:8030:8030'
+      - '127.0.0.1:8040:8040'
     depends_on:
       - ipfs
       - postgres
@@ -23,14 +26,18 @@ services:
       GRAPH_LOG: info
   ipfs:
     image: ipfs/kubo:v0.17.0
+    # Offline: graph-node only reads the files `graph deploy` uploads here, so
+    # IPFS needn't join the public swarm, whose dials to private address
+    # ranges Hetzner reports as a netscan.
+    command: ["daemon", "--migrate=true", "--offline"]
     ports:
-      - '5001:5001'
+      - '127.0.0.1:5001:5001'
     volumes:
       - ./data/ipfs:/data/ipfs:Z
   postgres:
     image: postgres
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     command:
       [
         "postgres",
